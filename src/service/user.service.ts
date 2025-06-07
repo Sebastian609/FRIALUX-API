@@ -1,14 +1,12 @@
 // src/services/User.service.ts
 import { User } from "../infrastructure/entity/users.entity";
 import { UserRepository } from "../repository/users.repository";
-import { CreateUserDto } from "../infrastructure/dto/users.dto";
+import { CreateUserDto, UpdateUserDto } from "../infrastructure/dto/users.dto";
 import { hashPassword } from "../utils/bcrip.util";
 import { plainToInstance } from "class-transformer";
 
-
 export class UserService {
-
-constructor(private readonly UserRepository: UserRepository) {}
+  constructor(private readonly UserRepository: UserRepository) {}
 
   /**
    * Get all Users
@@ -45,21 +43,30 @@ constructor(private readonly UserRepository: UserRepository) {}
    * @param UserData User data
    */
   async createUser(userData: CreateUserDto): Promise<User> {
-    
     const user = plainToInstance(User, userData);
-    const userExists = await this.UserRepository.findByUsername(user.username)
-     
-    if(userExists){
-        throw new Error(`Username with ${userData.username} allready exists.`)
+    const userExists = await this.UserRepository.findByUsername(user.username);
+
+    if (userExists) {
+      throw new Error(`Username with ${userData.username} allready exists.`);
     }
 
     user.password = await hashPassword(userData.password);
-
-
-
     return this.UserRepository.create(user);
   }
 
+  async update(userData: UpdateUserDto, userId: number): Promise<User> {
+    const user = plainToInstance(User, userData);
+    const currentUser = await this.UserRepository.findById(userId);
+    const usernameUsed = await this.UserRepository.findByUsername(
+      user.username
+    );
+
+    if (user.username && usernameUsed && usernameUsed.id !== currentUser.id) {
+      throw new Error(`Username "${userData.username}" is already in use.`);
+    }
+
+    return this.UserRepository.update(userId, user);
+  }
 
   async getPaginated(page: number, itemsPerPage: number) {
     const offset = page * itemsPerPage;
@@ -78,7 +85,7 @@ constructor(private readonly UserRepository: UserRepository) {}
         totalPages: Math.ceil(totalCount / itemsPerPage),
         hasNextPage: (page + 1) * itemsPerPage < totalCount,
         hasPreviousPage: page > 0,
-      }
-    }
+      },
+    };
   }
 }

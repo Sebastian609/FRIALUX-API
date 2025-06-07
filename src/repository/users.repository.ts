@@ -40,7 +40,7 @@ export class UserRepository implements IBaseRepository<User> {
   }
 
   async findById(id: number): Promise<User> {
-    const User = await this.repository.findOneBy({ id });
+    const User =  this.repository.findOneBy({ id });
     if (!User) {
       throw new Error(`User with ID ${id} not found`);
     }
@@ -57,7 +57,14 @@ export class UserRepository implements IBaseRepository<User> {
 
   async update(id: number, entity: Partial<User>): Promise<User> {
     await this.repository.update(id, entity);
-    const updatedUser = await this.findById(id);
+    const updatedUser = await this.repository.findOne({
+      where:{
+        id: id
+      },
+      relations:{
+        role:true
+      }
+    })
     return updatedUser;
   }
 
