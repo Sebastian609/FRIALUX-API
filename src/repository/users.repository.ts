@@ -24,6 +24,9 @@ export class UserRepository implements IBaseRepository<User> {
     },
     order:{
         createdAt: "DESC"
+    },
+    where: {
+      deleted: false
     }
   });
 
@@ -55,6 +58,20 @@ export class UserRepository implements IBaseRepository<User> {
     return this.repository.save(user);
   }
 
+  async updatePassword(userId: number, newPassword:string): Promise<boolean>{
+    const response = await this.repository.update(userId,
+      {
+        password: newPassword
+      }
+    )
+
+    if(response.affected==0){
+      throw new Error("Cant update password")
+    }
+
+    return true
+  }
+
   async update(id: number, entity: Partial<User>): Promise<User> {
     await this.repository.update(id, entity);
     const updatedUser = await this.repository.findOne({
@@ -73,7 +90,12 @@ export class UserRepository implements IBaseRepository<User> {
   }
 
   async softDelete(id: number): Promise<UpdateResult> {
-    return this.repository.softDelete(id);
+  
+    return this.repository.update(id,
+      {
+        deleted: true
+      }
+    )
   }
 
   async restore(id: number): Promise<UpdateResult> {

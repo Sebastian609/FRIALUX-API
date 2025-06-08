@@ -13,7 +13,7 @@ export async function hashPassword(password) {
 }
 
 // Verificar contraseña
-async function comparePassword(password, hash) {
+export async function comparePassword(password, hash) {
   try {
     const match = await bcrypt.compare(password, hash);
     return match; // true si coinciden, false si no

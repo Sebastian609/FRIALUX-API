@@ -41,6 +41,9 @@ export class User {
   @Column({name: 'role_id'})
   roleId: number;
 
+  @Column({name: 'deleted',default: false})
+  deleted: boolean;
+
   @ManyToOne(() => Role, { nullable: false })
   @JoinColumn({ name: 'role_id' })
   role: Role;

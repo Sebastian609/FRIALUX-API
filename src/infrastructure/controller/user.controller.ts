@@ -10,15 +10,36 @@ export class UserController {
     this.userService = service;
   }
 
-
-
-  async getById(req: Request, res: Response){
+  async softDelete(req: Request, res: Response) {
     try {
-      const { id } = req.params
-      const userId = id as unknown as number
- 
-      const  user  = await this.userService.getUserById(userId)
-      res.status(200).json(user)
+      const { id } = req.params;
+      const userId = id as unknown as number;
+
+      const user = await this.userService.softDelete(userId);
+      res.status(200).json(user);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async updatePassword(req: Request, res: Response) {
+    try {
+      const id = req.body.id as unknown as number;
+      const password = req.body.password as unknown as string;
+      const response = await this.userService.updatePassword(id, password);
+      res.status(200).json(response);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async getById(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const userId = id as unknown as number;
+
+      const user = await this.userService.getUserById(userId);
+      res.status(200).json(user);
     } catch (error) {
       res.status(400).json({ message: error.message });
     }
@@ -63,15 +84,10 @@ export class UserController {
   async updateUser(req: Request, res: Response) {
     try {
       const data: UpdateUserDto = req.body;
-      const id: number = req.params.id as unknown as number;
-      const newUser = await this.userService.update(data,id);
+      const newUser = await this.userService.update(data);
       res.status(201).json(newUser);
     } catch (error) {
-      if (error.message.includes("already exists")) {
-        res.status(409).json({ message: error.message });
-      } else {
-        res.status(400).json({ message: error.message });
-      }
+      res.status(400).json({ message: error.message });
     }
   }
 }

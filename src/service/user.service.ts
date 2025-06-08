@@ -2,7 +2,7 @@
 import { User } from "../infrastructure/entity/users.entity";
 import { UserRepository } from "../repository/users.repository";
 import { CreateUserDto, UpdateUserDto } from "../infrastructure/dto/users.dto";
-import { hashPassword } from "../utils/bcrip.util";
+import { comparePassword, hashPassword } from "../utils/bcrip.util";
 import { plainToInstance } from "class-transformer";
 
 export class UserService {
@@ -54,9 +54,9 @@ export class UserService {
     return this.UserRepository.create(user);
   }
 
-  async update(userData: UpdateUserDto, userId: number): Promise<User> {
+  async update(userData: UpdateUserDto): Promise<User> {
     const user = plainToInstance(User, userData);
-    const currentUser = await this.UserRepository.findById(userId);
+    const currentUser = await this.UserRepository.findById(userData.id);
     const usernameUsed = await this.UserRepository.findByUsername(
       user.username
     );
@@ -65,7 +65,25 @@ export class UserService {
       throw new Error(`Username "${userData.username}" is already in use.`);
     }
 
-    return this.UserRepository.update(userId, user);
+    return this.UserRepository.update(user.id, user);
+  }
+
+  async updatePassword(id: number, newPassword: string) {
+    const user = await this.UserRepository.findById(id);
+    if (await comparePassword(newPassword, user.password)) {
+      throw new Error("The new and old passwords are the same.");
+    }
+    const hashedPassword = await hashPassword(newPassword);
+    return await this.UserRepository.updatePassword(id, hashedPassword);
+  }
+
+  async softDelete(id: number) {
+    const exists = await this.UserRepository.findById(id);
+
+    if (!exists) {
+      throw new Error("El usuario no existe");
+    }
+    return await this.UserRepository.softDelete(id);
   }
 
   async getPaginated(page: number, itemsPerPage: number) {
@@ -74,7 +92,7 @@ export class UserService {
 
     const [items, totalCount] = await Promise.all([
       this.UserRepository.getPaginated(limit, offset),
-      this.UserRepository.count(), // Agregar método count si no existe
+      this.UserRepository.count(),
     ]);
     return {
       response: items,
