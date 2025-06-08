@@ -92,7 +92,7 @@ export class UserService {
 
     const [items, totalCount] = await Promise.all([
       this.UserRepository.getPaginated(limit, offset),
-      this.UserRepository.count(),
+      this.UserRepository.count({deleted: false}),
     ]);
     return {
       response: items,

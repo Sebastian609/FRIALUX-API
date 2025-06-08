@@ -4,46 +4,48 @@ import { User } from "../infrastructure/entity/users.entity";
 import { IBaseRepository } from "./base-repository.interface";
 
 export class UserRepository implements IBaseRepository<User> {
-  
   public constructor(private repository: Repository<User>) {
     this.repository = repository;
   }
-  
 
   async getPaginated(limit: number, offset: number): Promise<any> {
-  
-  if (limit < 1 || offset < 0) {
-    throw new Error('Invalid pagination parameters');
-  }
-
-  const [data, count] = await this.repository.findAndCount({
-    skip: offset,
-    take: limit,
-    relations: {
-        role:true
-    },
-    order:{
-        createdAt: "DESC"
-    },
-    where: {
-      deleted: false
+    if (limit < 1 || offset < 0) {
+      throw new Error("Invalid pagination parameters");
     }
-  });
 
-  const response = {
-    users: data,
-    count: count
+    const [data] = await this.repository.findAndCount({
+      skip: offset,
+      take: limit,
+      relations: {
+        role: true,
+      },
+      order: {
+        createdAt: "DESC",
+      },
+      where: {
+        deleted: false,
+      },
+    });
+    const count = await this.repository.count({
+      where: {
+        deleted: false,
+      },
+    });
+
+    const response = {
+      users: data,
+      count: count,
+    };
+
+    return response;
   }
-
-  return response
-}
 
   async findAll(): Promise<User[]> {
     return this.repository.find();
   }
 
   async findById(id: number): Promise<User> {
-    const User =  this.repository.findOneBy({ id });
+    const User = this.repository.findOneBy({ id });
     if (!User) {
       throw new Error(`User with ID ${id} not found`);
     }
@@ -58,30 +60,28 @@ export class UserRepository implements IBaseRepository<User> {
     return this.repository.save(user);
   }
 
-  async updatePassword(userId: number, newPassword:string): Promise<boolean>{
-    const response = await this.repository.update(userId,
-      {
-        password: newPassword
-      }
-    )
+  async updatePassword(userId: number, newPassword: string): Promise<boolean> {
+    const response = await this.repository.update(userId, {
+      password: newPassword,
+    });
 
-    if(response.affected==0){
-      throw new Error("Cant update password")
+    if (response.affected == 0) {
+      throw new Error("Cant update password");
     }
 
-    return true
+    return true;
   }
 
   async update(id: number, entity: Partial<User>): Promise<User> {
     await this.repository.update(id, entity);
     const updatedUser = await this.repository.findOne({
-      where:{
-        id: id
+      where: {
+        id: id,
       },
-      relations:{
-        role:true
-      }
-    })
+      relations: {
+        role: true,
+      },
+    });
     return updatedUser;
   }
 
@@ -90,12 +90,9 @@ export class UserRepository implements IBaseRepository<User> {
   }
 
   async softDelete(id: number): Promise<UpdateResult> {
-  
-    return this.repository.update(id,
-      {
-        deleted: true
-      }
-    )
+    return this.repository.update(id, {
+      deleted: true,
+    });
   }
 
   async restore(id: number): Promise<UpdateResult> {
