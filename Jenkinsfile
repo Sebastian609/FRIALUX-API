@@ -1,56 +1,62 @@
 pipeline {
     agent any
     tools {
-        nodejs "node" // Asegúrate de que "node" esté correctamente configurado en Jenkins
+        nodejs "node" // Make sure "node" is correctly configured in Jenkins Global Tool Configuration
     }
 
-    environment {
-        NODE_HOME = '/usr/local/bin' // Cambia según tu instalación de Node.js
-        PATH = "${NODE_HOME}:${env.PATH}"
-    }
 
     stages {
         stage('Checkout') {
             steps {
-                echo 'Clonando el repositorio...'
+                echo 'Cloning the repository...'
                 checkout scm
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                echo 'Instalando dependencias...'
+                echo 'Installing dependencies...'
                 sh 'npm install'
             }
         }
 
         stage('Build') {
             steps {
-                echo 'Compilando TypeScript...'
+                echo 'Compiling TypeScript...'
                 sh 'npm run build'
             }
         }
 
-    
+        stage('Run TypeORM Migrations') {
+            steps {
+                echo 'Generating and running TypeORM migrations...'
+                sh 'npm run typeorm migration:run --dataSource ./dist/data-source.js'
+            }
+        }
+
+
         stage('Deploy Application') {
             steps {
+                echo 'Deploying application with PM2...'
                 sh 'pm2 startOrRestart ecosystem.config.js --update-env'
                 sh 'pm2 list'
             }
         }
-    } // Aquí termina el bloque `stages`
+    }
 
     post {
         always {
             script {
-                sh 'pm2 save' // Guarda la configuración actual de PM2
+                echo 'Saving PM2 configuration...'
+                sh 'pm2 save' 
+                sh 'pm2 list'
             }
         }
         success {
-            echo '¡Despliegue exitoso!'
+            echo 'Deployment successful!'
         }
         failure {
-            echo 'El despliegue falló. Revisa los logs.'
+            echo 'Deployment failed. Check logs.'
         }
     }
-} // Aquí termina el bloque `pipeline`
+}
