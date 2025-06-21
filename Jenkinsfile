@@ -26,15 +26,6 @@ pipeline {
             }
         }
 
-        stage('Run TypeORM Migrations') {
-            steps {
-                echo 'Ejecutando migraciones de TypeORM...'
-                // ¡IMPORTANTE! Solo ejecutar migraciones existentes.
-                // Asegúrate de que tus migraciones ya están commiteadas en el repositorio.
-                // El 'dataSource' debe apuntar al archivo compilado en 'dist'.
-                sh 'node ./node_modules/typeorm/cli.js migration:run --dataSource ./dist/data-source.js'
-            }
-        }
 
         stage('Deploy Application') {
             steps {
