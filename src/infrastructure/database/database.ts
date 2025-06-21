@@ -1,7 +1,4 @@
-// src/database/data-source.ts
 import { DataSource } from 'typeorm';
-import { Role } from '../entity/roles.entity';
-import { User } from '../entity/users.entity';
 
 export const AppDataSource = new DataSource({
   type: 'mysql',
@@ -12,8 +9,8 @@ export const AppDataSource = new DataSource({
   database: 'frialux',
   synchronize: true,
   logging: true,
-  entities: [Role, User], // Agrega todas tus entidades aquí
-  migrations: [],
+  entities: ['src/infrastructure/entity/**/*.ts'],
+  migrations: ['src/infrastructure/migration/**/*.ts'],
   subscribers: [],
 });
 

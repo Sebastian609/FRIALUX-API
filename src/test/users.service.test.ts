@@ -14,14 +14,14 @@ describe("UserService", () => {
   let userRepositoryMock: jest.Mocked<UserRepository>;
 
   beforeEach(() => {
-    // Creamos el mock manualmente para el UserRepository
+  
     userRepositoryMock = {
       findByUsername: jest.fn(),
       create: jest.fn(),
-      // Otros métodos si los usas en tests
+    
     } as unknown as jest.Mocked<UserRepository>;
 
-    // Inyectamos el mock en el servicio
+  
     userService = new UserService(userRepositoryMock);
   });
 
