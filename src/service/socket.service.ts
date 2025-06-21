@@ -2,7 +2,7 @@
 import { Server, Socket } from "socket.io";
 import { Message } from "../model/message.model";
 import { ISocketService } from "./ISocketService";
-import { CreateReadingDto, SendedReadingDto, SendReadingDto } from "../infrastructure/dto/reading.dto";
+import {  SendReadingDto } from "../infrastructure/dto/reading.dto";
 import { Notification } from "../infrastructure/entity/notification.entity";
 
 export class SocketService implements ISocketService {
