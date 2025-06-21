@@ -11,9 +11,10 @@ export const AppDataSource = new DataSource({
   database: DB_NAME,
   synchronize: true,
   logging: true,
-  entities: ['src/infrastructure/entity/**/*.ts'],
-  migrations: ['src/infrastructure/migration/**/*.ts'],
-  subscribers: [],
+      entities: ["dist/infrastructure/entity/**/*.js"], // <-- ¡Asegúrate de que apunte a .js en dist!
+    migrations: ["dist/migration/**/*.js"],
+    subscribers: ["dist/subscriber/**/*.js"],
+
 });
 
 // Inicializar la conexión
