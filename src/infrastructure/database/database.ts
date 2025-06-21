@@ -1,12 +1,14 @@
+import "reflect-metadata";
 import { DataSource } from 'typeorm';
+import { DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT, DB_USER } from "../config/config";
 
 export const AppDataSource = new DataSource({
   type: 'mysql',
-  host: '185.187.235.137',
-  port: 3306,
-  username: 'viverco_frialux_user',
-  password: '1^IOfg8xm[#QK}VQ',
-  database: 'viverco_frialux',
+  host: DB_HOST,
+  port: DB_PORT as number,
+  username: DB_USER,
+  password: DB_PASSWORD,
+  database: DB_NAME,
   synchronize: true,
   logging: true,
   entities: ['src/infrastructure/entity/**/*.ts'],
@@ -17,4 +19,4 @@ export const AppDataSource = new DataSource({
 // Inicializar la conexión
 AppDataSource.initialize()
   .then(() => console.log('Conexión a la base de datos establecida'))
-  .catch(error => console.log('Error de conexión:', error));
+  .catch(error => console.log('Error de conexión:', error));  
