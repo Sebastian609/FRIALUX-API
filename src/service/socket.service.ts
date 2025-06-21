@@ -2,7 +2,7 @@
 import { Server, Socket } from "socket.io";
 import { Message } from "../model/message.model";
 import { ISocketService } from "./ISocketService";
-import { CreateReadingDto } from "../infrastructure/dto/reading.dto";
+import { CreateReadingDto, SendedReadingDto, SendReadingDto } from "../infrastructure/dto/reading.dto";
 import { Notification } from "../infrastructure/entity/notification.entity";
 
 export class SocketService implements ISocketService {
@@ -13,7 +13,7 @@ export class SocketService implements ISocketService {
   }
 
 
-  public sendReadings(readings: CreateReadingDto[], wsRoom: string): void {
+  public sendReadings(readings: SendReadingDto[], wsRoom: string): void {
     readings.forEach((r)=>{
       this.io.emit(wsRoom,r)
     })

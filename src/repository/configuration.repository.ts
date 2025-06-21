@@ -110,7 +110,8 @@ async findByReadingTypeAndWebSocket(readingTypeId: number, socketRoom: string): 
   return this.repository
     .createQueryBuilder('configuration')
     .leftJoinAndSelect('configuration.module', 'module')
-    .where('configuration.readingTypeId = :readingTypeId', { readingTypeId })
+    .leftJoinAndSelect('configuration.readingType', 'readingType')
+    .where('readingType.id = :readingTypeId', { readingTypeId })
     .andWhere('module.webSocketRoom = :socketRoom', { socketRoom })
     .andWhere('module.deleted = false')
     .andWhere('module.isActive = true')

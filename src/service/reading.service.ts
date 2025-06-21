@@ -5,20 +5,20 @@ import {
   CreateReadingDto,
   UpdateReadingDto,
   CreateRaingsBatchDto,
+  SendReadingDto,
 } from "../infrastructure/dto/reading.dto";
 import { ConfigurationService } from "./configuration.service";
 import { Notification } from "../infrastructure/entity/notification.entity";
 import { Configuration } from "../infrastructure/entity/configuration.entity";
 import { SocketService } from "./socket.service";
 import { NotificationService } from "./notification.service";
-import { read } from "fs";
 
 export class ReadingService {
   constructor(
     private readonly ReadingRepository: ReadingRepository,
     private readonly ConfigurationService: ConfigurationService,
     private readonly SocketService: SocketService,
-    private readonly  NotificationService: NotificationService
+    private readonly NotificationService: NotificationService
   ) {}
 
   async getReadingById(id: number): Promise<Reading> {
@@ -29,80 +29,102 @@ export class ReadingService {
     return this.ReadingRepository.findAll();
   }
 
-async createReadingOnBatch(batch: CreateRaingsBatchDto): Promise<void> {
-  const readingsToCreate: Reading[] = [];
-  const notifications: Notification[] = [];
+  async createReadingOnBatch(batch: CreateRaingsBatchDto): Promise<void> {
+    const readingsToCreate: Reading[] = [];
+    const notifications: Notification[] = [];
+    const readingToSend: SendReadingDto[] = [];
 
-  const configCache = new Map<number, Configuration>();
+    const configCache = new Map<number, Configuration>();
 
-  for (const reading of batch.readings) {
-    let configuration = configCache.get(reading.readingTypeId);
+    for (const reading of batch.readings) {
+      let configuration = configCache.get(reading.readingTypeId);
 
-    if (!configuration) {
-      configuration = await this.ConfigurationService.findByReadingTypeAndWebSocket(
-        reading.readingTypeId,
-        batch.webSocketRoom
-      );
-      configCache.set(reading.readingTypeId, configuration);
+      if (!configuration) {
+        configuration =
+          await this.ConfigurationService.findByReadingTypeAndWebSocket(
+            reading.readingTypeId,
+            batch.webSocketRoom
+          );
+
+        configCache.set(reading.readingTypeId, configuration);
+      }
+
+      const newReading = new Reading();
+      newReading.configurationId = configuration.id;
+      newReading.value = reading.value;
+      readingsToCreate.push(newReading);
+
+      readingToSend.push({
+        reading: configuration.readingType,
+        readingTypeId: configuration.readingTypeId,
+        value: reading.value,
+      })
     }
 
-    const newReading = new Reading();
-    newReading.configurationId = configuration.id;
-    newReading.value = reading.value;
+    const savedReadings = await this.ReadingRepository.createMany(
+      readingsToCreate
+    );
 
-    readingsToCreate.push(newReading);
+    for (const savedReading of savedReadings) {
+      const config = configCache.get(savedReading.configuration.readingTypeId);
+
+      if (!config) continue;
+
+      const numericSavedValue = parseFloat(savedReading.value as any);
+      const numericMaxValue = parseFloat(config.maxValue as any);
+      const numericMinValue = parseFloat(config.minValue as any);
+
+      if (
+        isNaN(numericSavedValue) ||
+        isNaN(numericMaxValue) ||
+        isNaN(numericMinValue)
+      ) {
+        console.error(
+          "Uno de los valores no pudo ser convertido a número. Saltando notificación para esta lectura."
+        );
+        continue;
+      }
+
+      const roundedSavedValue = parseFloat(numericSavedValue.toFixed(3));
+      const roundedMaxValue = parseFloat(numericMaxValue.toFixed(3));
+      const roundedMinValue = parseFloat(numericMinValue.toFixed(3));
+
+      if (roundedSavedValue > roundedMaxValue) {
+        notifications.push(
+          this.createNotification(
+            savedReading.id,
+            `Valor por encima del límite: ${savedReading.value} > ${config.maxValue} en modulo ${config.module.name}`
+          )
+        );
+      }
+
+      if (roundedSavedValue < roundedMinValue) {
+        notifications.push(
+          this.createNotification(
+            savedReading.id,
+            `Valor por debajo del mínimo: ${savedReading.value} < ${config.minValue} en modulo ${config.module.name}`
+          )
+        );
+      }
+    }
+
+    if (notifications.length > 0) {
+      await this.NotificationService.createMany(notifications);
+      this.SocketService.sendNotifications(notifications);
+    }
+
+    if (readingToSend.length > 0) {
+      this.SocketService.sendReadings(readingToSend, batch.webSocketRoom);
+    }
   }
 
-  const savedReadings = await this.ReadingRepository.createMany(readingsToCreate);
-
-  for (const savedReading of savedReadings) {
-    const config = configCache.get(savedReading.configuration.readingTypeId);
-
-    if (!config) continue;
-
-    const numericSavedValue = parseFloat(savedReading.value as any);
-    const numericMaxValue = parseFloat(config.maxValue as any);
-    const numericMinValue = parseFloat(config.minValue as any);
-
-    if (isNaN(numericSavedValue) || isNaN(numericMaxValue) || isNaN(numericMinValue)) {
-      console.error("Uno de los valores no pudo ser convertido a número. Saltando notificación para esta lectura.");
-      continue;
-    }
-
-    const roundedSavedValue = parseFloat(numericSavedValue.toFixed(3));
-    const roundedMaxValue = parseFloat(numericMaxValue.toFixed(3));
-    const roundedMinValue = parseFloat(numericMinValue.toFixed(3));
-
-    if (roundedSavedValue > roundedMaxValue) {
-      notifications.push(this.createNotification(
-        savedReading.id,
-        `Valor por encima del límite: ${savedReading.value} > ${config.maxValue} en modulo ${config.module.name}`
-      ));
-    }
-
-    if (roundedSavedValue < roundedMinValue) {
-      notifications.push(this.createNotification(
-        savedReading.id,
-        `Valor por debajo del mínimo: ${savedReading.value} < ${config.minValue} en modulo ${config.module.name}`
-      ));
-    }
+  // Método auxiliar para crear notificaciones
+  private createNotification(readingId: number, message: string): Notification {
+    const notification = new Notification();
+    notification.readingId = readingId;
+    notification.message = message;
+    return notification;
   }
-
-  if (notifications.length > 0) {
-    await this.NotificationService.createMany(notifications);
-    this.SocketService.sendNotifications(notifications);
-  }
-
-  this.SocketService.sendReadings(batch.readings, batch.webSocketRoom);
-}
-
-// Método auxiliar para crear notificaciones
-private createNotification(readingId: number, message: string): Notification {
-  const notification = new Notification();
-  notification.readingId = readingId;
-  notification.message = message;
-  return notification;
-}
 
   async createReading(readingData: CreateReadingDto): Promise<Reading> {
     const reading = plainToInstance(Reading, readingData);
@@ -123,10 +145,15 @@ private createNotification(readingId: number, message: string): Notification {
     return await this.ReadingRepository.softDelete(id);
   }
 
-  async findLast24HoursByModuleAndReadingTypeId(readingTypeId: number, ws: string) {
-    return this.ReadingRepository.findLast24HoursByModuleAndReadingTypeId(ws, readingTypeId);
+  async findLast24HoursByModuleAndReadingTypeId(
+    readingTypeId: number,
+    ws: string
+  ) {
+    return this.ReadingRepository.findLast24HoursByModuleAndReadingTypeId(
+      ws,
+      readingTypeId
+    );
   }
-
 
   async getPaginated(page: number, itemsPerPage: number) {
     const offset = page * itemsPerPage;
