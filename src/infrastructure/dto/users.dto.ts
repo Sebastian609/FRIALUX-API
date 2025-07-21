@@ -64,3 +64,15 @@ export class UpdateUserDto {
   @Expose({ name: 'role_id' })
   roleId: number;
 }
+
+export class LoginDto {
+  @IsNotEmpty()
+  @IsString()
+  @Expose()
+  username: string;
+
+  @IsNotEmpty()
+  @IsString()
+  @Expose()
+  password: string;
+}

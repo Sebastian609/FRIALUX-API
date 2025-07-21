@@ -1,7 +1,7 @@
 // src/services/User.service.ts
 import { User } from "../infrastructure/entity/users.entity";
 import { UserRepository } from "../repository/users.repository";
-import { CreateUserDto, UpdateUserDto } from "../infrastructure/dto/users.dto";
+import { CreateUserDto, UpdateUserDto, LoginDto } from "../infrastructure/dto/users.dto";
 import { comparePassword, hashPassword } from "../utils/bcrip.util";
 import { plainToInstance } from "class-transformer";
 
@@ -105,5 +105,21 @@ export class UserService {
         hasPreviousPage: page > 0,
       },
     };
+  }
+
+  async login(loginDto: LoginDto): Promise<User> {
+    const user = await this.UserRepository.findByUsername(loginDto.username);
+    if (!user) {
+      throw new Error("Usuario incorrectos");
+    }
+    const isPasswordValid = await comparePassword(loginDto.password, user.password);
+    
+    if (!isPasswordValid) {
+      throw new Error(" contraseña incorrectos");
+    }
+    if (!user.isActive || user.deleted) {
+      throw new Error("Usuario inactivo o eliminado");
+    }
+    return user;
   }
 }

@@ -38,11 +38,16 @@ import { NotificationRepository } from "./repository/notification.repository";
 import { Notification } from "./infrastructure/entity/notification.entity";
 import { NotificationController } from "./infrastructure/controller/notification.controller";
 import { NotificationRoutes } from "./routes/notification.routes";
+import authRoutes from "./routes/auth.routes";
+import cors from 'cors';
 
 const PORT = 2224;
 const app = express();
 const httpServer = createServer(app);
-
+app.use(cors({
+  origin: true,          // o una lista como ['http://localhost:1420']
+  credentials: true
+}));
 const io = new Server(httpServer, {
   cors: {
     origin: "*",
@@ -119,6 +124,7 @@ app.use("/api/reading-types", readingTypeRoutes.getRoutes());
 app.use("/api/configurations", configurationRoutes.getRoutes());
 app.use("/api/readings", readingRoutes.getRoutes());
 app.use("/api/notifications", notificationRouters.getRoutes());
+app.use("/api/auth", authRoutes);
 
 io.on("connection", (socket) => {
   socketService.handleConnection(socket);
