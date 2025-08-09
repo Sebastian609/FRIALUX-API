@@ -109,13 +109,9 @@ export class UserService {
 
   async login(loginDto: LoginDto): Promise<User> {
     const user = await this.UserRepository.findByUsername(loginDto.username);
-    if (!user) {
-      throw new Error("Usuario incorrectos");
-    }
-    const isPasswordValid = await comparePassword(loginDto.password, user.password);
-    
-    if (!isPasswordValid) {
-      throw new Error(" contraseña incorrectos");
+    const isPasswordValid = user ? await comparePassword(loginDto.password, user.password) : false;
+    if (!user || !isPasswordValid) {
+      throw new Error("Usuario o contraseña incorrectos");
     }
     if (!user.isActive || user.deleted) {
       throw new Error("Usuario inactivo o eliminado");
